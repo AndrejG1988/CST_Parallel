@@ -4,22 +4,40 @@
 
 #pragma warning(disable : 4996)
 
-
-
 void dateiEinlesen();
-char randomStringNumber();
+uint64_t hammingDistanz(char *str1, char *str2);
+
 
 int main(int argc, char **argv) {
 
-
-
-	dateiEinlesen();
+	//dateiEinlesen();
 	//Testvariables
 	char str1[] = "123456";
-	char str2[] = "122456";
-	int laengegesamt = 6;
-	randomStringNumber(laengegesamt);
+	char str2[] = "123654";
 
+
+	char buf[] = "000000";
+	uint64_t dif = 0;
+	uint64_t bestDif = 0-1;
+	//printf("%llu\n", bestDif);
+	//exit(0);
+	// Schleife zählt von 0 bis 0xFF hoch
+	for (uint64_t i = 0; i <= 0xFFFFFF; i++) {
+		//convert uint in hex String
+		sprintf(buf, "%06llx", i);
+		//printf("%s <> %s = ", buf, str1);
+		
+		// berechne unterschide
+		dif = hammingDistanz(str1, buf);
+		//printf("%d\n", dif);
+
+		if (dif < bestDif){
+			// set new best score
+			bestDif = dif;
+			printf("%s <> %s = %llu\n", str1, buf, dif );
+		}
+	}
+	exit(0);
 	hammingDistanz(str1, str2);
 	system("pause");
 	return 0;
@@ -37,14 +55,14 @@ void dateiEinlesen() {
 
 	int stringGroesse = 0;
 	int stringLaenge = 0;
-	void** inhaltQuelle;
+	char** inhaltQuelle;
 	// Speicher reservieren
-	char *zeile = malloc(sizeof(char)*laenge);
+	char* zeile = (char*)malloc(sizeof(char)*laenge);
 
 	//prüfe ob die datei auch existiert
 	if (NULL == quelle) {
-		printf("Konnte Datei \"test.txt\" nicht öffnen!\n");
-		return 1;
+		printf("Konnte Datei \"test.txt\" nicht oeffnen!\n");
+		return;
 	}
 
 	//erste Zeile der Text datei auslesen und in eine Variabele speichern, mit fgets(ziel, n menge, quelle).
@@ -64,7 +82,7 @@ void dateiEinlesen() {
 	while (fgets(zeile, laenge, quelle) != NULL) {
 		int count = 0;
 		//printf("%d\n", stringGroesse);
-		inhaltQuelle = malloc(stringGroesse * sizeof * inhaltQuelle);
+		inhaltQuelle = (char**)malloc(stringGroesse * sizeof * inhaltQuelle);
 		inhaltQuelle[count] = zeile;
 		//printf("%d\n", sizeof(void*));
 		printf("%s\n", inhaltQuelle[count]);
@@ -75,9 +93,9 @@ void dateiEinlesen() {
 	free(zeile);
 }
 
-int hammingDistanz(char *str1, char *str2)
+uint64_t hammingDistanz(char *str1, char *str2)
 {
-	int i = 0, count = 0;
+	uint64_t i = 0, count = 0;
 	while (str1[i] != NULL)
 	{
 
@@ -87,7 +105,7 @@ int hammingDistanz(char *str1, char *str2)
 		}
 		i++;
 	}
-	printf("Die Hamming Distanz ist: %d \n", count);
+	//printf("Die Hamming Distanz ist: %d \n", count);
 
 	return count;
 

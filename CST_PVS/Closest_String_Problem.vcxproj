@@ -132,12 +132,7 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="cst_mpi.c" />
     <ClCompile Include="CST_parallel.c" />
-    <ClCompile Include="hemming.c" />
-    <ClCompile Include="MpiTest.c" />
-    <ClCompile Include="Quelle.c" />
-    <ClCompile Include="Source.c" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="strings.txt" />

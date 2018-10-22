@@ -15,21 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cst_mpi.c">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="hemming.c">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="MpiTest.c">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Source.c">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
-    <ClCompile Include="Quelle.c">
-      <Filter>Quelldateien</Filter>
-    </ClCompile>
     <ClCompile Include="CST_parallel.c">
       <Filter>Quelldateien</Filter>
     </ClCompile>
