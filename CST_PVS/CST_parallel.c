@@ -16,6 +16,7 @@ uint32_t valueLength;
 
 uint64_t bestValue;
 uint64_t bestDif = -1;
+uint64_t bestScore = -1;
 
 int main(int argc, char **argv) {
 
@@ -23,34 +24,37 @@ int main(int argc, char **argv) {
 
 	uint64_t currDif = 0;
 	uint64_t localDif = 0;
+	uint64_t sum;
 
 	uint64_t maxValue = pow(2,4*valueLength)-1 ;
 	//printf("%llx\n", maxValue);
 
-	// Schleife zählt von 0 bis 0xFFFFFF hoch
-	for (uint64_t i = 0; i <= maxValue; i++) {
+	// Schleife zählt von 0 bis 0xFFFFFF hoch (in newValue)
+	for (uint64_t newValue = 0; newValue <= maxValue; newValue++) { 
 		localDif = 0;
-		for (int o = 0; o < valuesCount; o++){
+		sum = 0;
+		for (int i = 0; i < valuesCount; i++){
 			// berechne unterschide
-			currDif = hammingDistanz(i, valueList[o]);
-			//printf("%d %06llx <> %06llx - %llu \n", o, i, valueList[o], currDif);
+			currDif = hammingDistanz(newValue, valueList[i]);
+			// summiere alle Unterschidswerte
+			sum += currDif;
 
+			// speichert höchste differenz zu newValue
 			if (currDif > localDif)
 				localDif = currDif;
 
-			
-			if (currDif >= bestDif)
+			// beginnt mit nächstem iteration für newValue bei:
+			if (sum >= bestScore ||  // 
+				currDif > bestDif)
 				break;
 		}
-		//printf("%06llx %llu\n", i, localDif );
-		if (localDif < bestDif) {
+
+		if (localDif <= bestDif && sum < bestScore ) {
 			bestDif = localDif;
-			bestValue = i;
-			printf("new best: %0*llx score: %llu\n", (int)valueLength, bestValue, bestDif );
+			bestScore = sum;
+			bestValue = newValue;
+			printf("new best: %0*llx dif: %llu sum: %llu\n", (int)valueLength, bestValue, bestDif, bestScore );
 		}
-		//printf("%06llx\n", i);
-		//printf("%llu %llu %llu\n",  bestDif, localDif, currDif);
-		//exit(0);
 	}
 
 	printResult();
@@ -65,7 +69,7 @@ void dateiEinlesen() {
 	FILE *quelle;
 
 	/* Bitte Pfad und Dateinamen anpassen */
-	quelle = fopen("strings_original.txt", "r");
+	quelle = fopen("strings.txt", "r");
 	size_t laenge = 255;
 
 	// Speicher reservieren
@@ -140,5 +144,7 @@ void printResult(){
 		dif = hammingDistanz(bestValue, valueList[i]);
 		printf("%0*llx\t%llu\n", vSize, valueList[i], dif);
 	}
+	printf("--------------------------------------\n");
+	printf("%*s\t%llu\n", vSize, "sum:", bestScore);
 	printf("======================================\n");
 }
