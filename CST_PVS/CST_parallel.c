@@ -1,44 +1,63 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <math.h>
 
 #pragma warning(disable : 4996)
 
 void dateiEinlesen();
-uint64_t hammingDistanz(char *str1, char *str2);
+//int hammingDistanz(char *str1, char *str2);
+int hammingDistanz(uint64_t x, uint64_t y);
+void printResult();
 
+uint64_t* valueList;
+uint32_t valuesCount;
+uint32_t valueLength;
+
+uint64_t bestValue;
+uint64_t bestDif = -1;
 
 int main(int argc, char **argv) {
 
-	//dateiEinlesen();
-	//Testvariables
-	char str1[] = "123456";
-	char str2[] = "123654";
+	dateiEinlesen();
 
+	uint64_t currDif = 0;
+	uint64_t localDif = 0;
 
-	char buf[] = "000000";
-	uint64_t dif = 0;
-	uint64_t bestDif = 0-1;
-	//printf("%llu\n", bestDif);
-	//exit(0);
-	// Schleife z‰hlt von 0 bis 0xFF hoch
-	for (uint64_t i = 0; i <= 0xFFFFFF; i++) {
-		//convert uint in hex String
-		sprintf(buf, "%06llx", i);
-		//printf("%s <> %s = ", buf, str1);
-		
-		// berechne unterschide
-		dif = hammingDistanz(str1, buf);
-		//printf("%d\n", dif);
+	uint64_t maxValue = pow(2,4*valueLength)-1 ;
+	//printf("%llx\n", maxValue);
 
-		if (dif < bestDif){
-			// set new best score
-			bestDif = dif;
-			printf("%s <> %s = %llu\n", str1, buf, dif );
+	// Schleife z√§hlt von 0 bis 0xFFFFFF hoch
+	for (uint64_t i = 0; i <= maxValue; i++) {
+		localDif = 0;
+		for (int o = 0; o < valuesCount; o++){
+			// berechne unterschide
+			currDif = hammingDistanz(i, valueList[o]);
+			//printf("%d %06llx <> %06llx - %llu \n", o, i, valueList[o], currDif);
+
+			if (currDif > localDif)
+				localDif = currDif;
+
+			/*
+			if (currDif >= bestDif)
+				break;
+			*/
+			
+			if (currDif > localDif)
+				localDif = currDif;
 		}
+		//printf("%06llx %llu\n", i, localDif );
+		if (localDif < bestDif) {
+			bestDif = localDif;
+			bestValue = i;
+			printf("new best: %06llx score: %llu\n", bestValue, bestDif );
+		}
+		//printf("%06llx\n", i);
+		//printf("%llu %llu %llu\n",  bestDif, localDif, currDif);
+		//exit(0);
 	}
-	exit(0);
-	hammingDistanz(str1, str2);
+
+	printResult();
 	system("pause");
 	return 0;
 }
@@ -53,13 +72,10 @@ void dateiEinlesen() {
 	quelle = fopen("strings.txt", "r");
 	size_t laenge = 255;
 
-	int stringGroesse = 0;
-	int stringLaenge = 0;
-	char** inhaltQuelle;
 	// Speicher reservieren
 	char* zeile = (char*)malloc(sizeof(char)*laenge);
 
-	//pr¸fe ob die datei auch existiert
+	//pr√ºfe ob die datei auch existiert
 	if (NULL == quelle) {
 		printf("Konnte Datei \"test.txt\" nicht oeffnen!\n");
 		return;
@@ -68,37 +84,43 @@ void dateiEinlesen() {
 	//erste Zeile der Text datei auslesen und in eine Variabele speichern, mit fgets(ziel, n menge, quelle).
 	if (fgets(zeile, laenge, quelle) != NULL) {
 
-		stringGroesse = atoi(zeile);
-		printf("Groesse: %s\n", zeile);
+		valuesCount = atoi(zeile);
+		printf("Groesse: %d\n", valuesCount);
+		valueList = (uint64_t*)malloc(valuesCount * sizeof(uint64_t));
 	}
 
 	//zweite Zeile der Text datei auslesen und in eine Variabele speichern, mit fgets(ziel, n menge, quelle).
 	if (fgets(zeile, laenge, quelle) != NULL) {
-		stringLaenge = atoi(zeile);
-		printf("Laenge: %s\n", zeile);
+
+		valueLength = atoi(zeile);
+		printf("Laenge: %d\n", valuesCount);
 	}
-	printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n\n");
+	printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n");
 	//
+	int count = 0;
+	printf("%8s <<\tint\n", "hex");
+
 	while (fgets(zeile, laenge, quelle) != NULL) {
-		int count = 0;
-		//printf("%d\n", stringGroesse);
-		inhaltQuelle = (char**)malloc(stringGroesse * sizeof * inhaltQuelle);
-		inhaltQuelle[count] = zeile;
-		//printf("%d\n", sizeof(void*));
-		printf("%s\n", inhaltQuelle[count]);
+		// wandle hex-string zu uint um und schreibe in liste
+		valueList[count] = (uint64_t)strtol(zeile, NULL, 16);
+
+		printf("0x%06llx <<\t%llu\n", valueList[count], valueList[count]);
+
 		count++;
+		if (count >= valuesCount)
+			break;
 	}
 	printf("\n");
 
 	free(zeile);
 }
 
-uint64_t hammingDistanz(char *str1, char *str2)
+/*
+int hammingDistanz(char *str1, char *str2)
 {
 	uint64_t i = 0, count = 0;
 	while (str1[i] != NULL)
 	{
-
 		if (str1[i] != str2[i])
 		{
 			count++;
@@ -106,8 +128,34 @@ uint64_t hammingDistanz(char *str1, char *str2)
 		i++;
 	}
 	//printf("Die Hamming Distanz ist: %d \n", count);
-
 	return count;
+}
+*/
 
+int hammingDistanz(uint64_t x, uint64_t y){
+	uint64_t i = 0xf;
+	int count = 0;
+	for (int o = 0; o <= valuesCount; o++){
+		if (  __builtin_popcountll((i&x) ^ (i&y)) != 0 ){
+			//printf("%llx, %llx\n", i&x, i&y);
+			count++;
+		}
+		i <<= 4;
+	}
+	return count;
 }
 
+
+void printResult(){
+	printf("======================================\n");
+	printf("Closest string:\n");
+	printf("Distance %llu\n", bestDif);
+	printf("New string %05llx\n", bestValue );
+	printf("String\tDistance\n");
+	uint64_t dif;
+	for (int i = 0; i < valuesCount; i++){
+		dif = hammingDistanz(bestValue, valueList[i]);
+		printf("%05llx\t%llu\n", valueList[i], dif);
+	}
+	printf("======================================\n");
+}
