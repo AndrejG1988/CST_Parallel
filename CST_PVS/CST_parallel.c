@@ -3,6 +3,11 @@
 #include <time.h>
 #include <math.h>
 
+#ifdef _MSC_VER
+#  include <intrin.h>
+#  define __builtin_popcount __popcnt
+#endif
+
 #pragma warning(disable : 4996)
 
 void dateiEinlesen();
