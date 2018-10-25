@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
+#include <unistd.h>
 
 #ifdef _MSC_VER
 #  include <intrin.h>
@@ -12,10 +13,14 @@
 
 //#define WithScore // langsamer 
 
+int verbos = 3;
+char* file = NULL;
+
 void dateiEinlesen();
 //int hammingDistanz(char *str1, char *str2);
 int hammingDistanz(uint64_t x, uint64_t y);
 void printResult();
+void run();
 
 uint64_t* valueList; // speicher alle eingelesenen Werte als unsigned long long (max 16 Zeichen)
 uint32_t valuesCount;
@@ -26,9 +31,52 @@ uint64_t bestDif = -1;
 uint64_t bestScore = -1;
 
 int main(int argc, char **argv) {
+	int opt = 0;
+	int temp = 0;
+
+	while ((opt = getopt(argc, argv, "v:f:")) != -1) {
+		switch(opt){
+		case 'v':
+		temp = atoi(optarg);
+		if (temp >= 0 && temp <= 3){
+			printf("Verbos: %d\n", temp);
+			verbos = temp;	
+		}
+		break;
+		case 'f':
+		file = optarg;
+		printf("input file: %s\n", file);
+		break;
+		case '?':
+		printf("wtf\n");
+		break;
+		default:
+		printf("hmmmm\n");
+
+		}
+	}
+
+	if (file == NULL){
+		file = "strings.txt";
+	}
 
 	dateiEinlesen();
+	clock_t begin = clock();
 
+	run();
+
+	clock_t end = clock();
+	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+	printf("duration: %f\n", time_spent);
+	printResult();
+#ifdef _MSC_VER
+	system("pause");
+#endif
+	return 0;
+}
+
+void run(){
 	uint64_t currDif = 0;
 	uint64_t localDif = 0;
 #ifdef WithScore
@@ -74,21 +122,17 @@ int main(int argc, char **argv) {
 			bestScore = sum;
 			bestDif = localDif;
 			bestValue = newValue;
-			printf("new best: %0*llx dif: %llu sum: %llu\n", (int)valueLength, bestValue, bestDif, bestScore );
+			//printf("new best: %0*llx dif: %llu sum: %llu\n", (int)valueLength, bestValue, bestDif, bestScore );
 		}
 #else
 		if (localDif < bestDif ) {	
 			bestDif = localDif;
 			bestValue = newValue;
-			printf("new best: %0*llx dif: %llu\n", (int)valueLength, bestValue, bestDif );
+			//printf("new best: %0*llx dif: %llu\n", (int)valueLength, bestValue, bestDif );
 		}
 #endif
 
 	}
-
-	printResult();
-	system("pause");
-	return 0;
 }
 
 // einlesen der Informationen aus der Quelle "strings.txt" Datei
@@ -98,7 +142,7 @@ void dateiEinlesen() {
 	FILE *quelle;
 
 	/* Bitte Pfad und Dateinamen anpassen */
-	quelle = fopen("strings8.txt", "r");
+	quelle = fopen(file, "r");
 	size_t laenge = 255;
 
 	// Speicher reservieren
@@ -122,7 +166,7 @@ void dateiEinlesen() {
 	if (fgets(zeile, laenge, quelle) != NULL) {
 
 		valueLength = atoi(zeile);
-		printf("Laenge: %d\n", valuesCount);
+		printf("Laenge: %d\n", valueLength);
 		if (valueLength > 16){
 			printf("Zeichenkette zu lang(max 16). Dateinvormat kann nicht allles speichern\n");
 			exit(2);
@@ -131,13 +175,13 @@ void dateiEinlesen() {
 	printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n");
 	//
 	int count = 0;
-	printf("%*s <<\tint\n", (int)(valueLength+2), "hex");
+	printf(" i. hex\n");
 
 	while (fgets(zeile, laenge, quelle) != NULL) {
 		// wandle hex-string zu uint um und schreibe in liste
 		valueList[count] = (uint64_t)strtol(zeile, NULL, 16);
 
-		printf("0x%0*llx <<\t%llu\n", (int)valueLength, valueList[count], valueList[count]);
+		printf("%2d. 0x%0*llx \n", count, (int)valueLength, valueList[count]);
 
 		count++;
 		if (count >= valuesCount)
