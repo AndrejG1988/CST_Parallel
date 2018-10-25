@@ -14,7 +14,7 @@
 //#define WithScore // langsamer 
 
 int verbos = 3;
-char* file = NULL;
+char* file = "strings8.txt";
 
 void dateiEinlesen();
 //int hammingDistanz(char *str1, char *str2);
@@ -56,10 +56,6 @@ int main(int argc, char **argv) {
 		}
 	}
 
-	if (file == NULL){
-		file = "strings.txt";
-	}
-
 	dateiEinlesen();
 	clock_t begin = clock();
 
@@ -68,8 +64,11 @@ int main(int argc, char **argv) {
 	clock_t end = clock();
 	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
 
-	printf("duration: %f\n", time_spent);
-	printResult();
+	if (verbos == 1 || verbos == 3)
+		printResult();
+	if (verbos >= 2 )
+		printf("duration: %f sec\n", time_spent);
+	
 #ifdef _MSC_VER
 	system("pause");
 #endif
