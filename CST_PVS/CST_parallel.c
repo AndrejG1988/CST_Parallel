@@ -134,7 +134,7 @@ int main(int argc, char **argv) {
 			printResult();
 		if (verbos >= 2 ){
 			avgtime /= numprocs;
-			printf("Min: %lf  Max: %lf  Avg:  %lf\n", mintime, maxtime,avgtime);
+			printf("MPI time messure: Min: %lf  Max: %lf  Avg:  %lf\n", mintime, maxtime,avgtime);
 			printf("clock duration: %f sec\n", time_spent);
 		}
 	}
