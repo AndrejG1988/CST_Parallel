@@ -3,6 +3,7 @@
 #include <time.h>
 #include <math.h>
 #include <unistd.h>
+#include <mpi.h>
 
 #ifdef _MSC_VER
 #  include <intrin.h>
@@ -11,29 +12,144 @@
 
 #pragma warning(disable : 4996)
 
-//#define WithScore // langsamer 
-
 int verbos = 3;
-char* file = "strings8.txt";
+char* file = "strings7.txt";
 
+void initArguments(int argc, char **argv);
 void dateiEinlesen();
-//int hammingDistanz(char *str1, char *str2);
-int hammingDistanz(uint64_t x, uint64_t y);
-void printResult();
-void run();
 
+void run(uint64_t start, uint64_t stop);
+int hammingDistanz(uint64_t x, uint64_t y);
+
+void printResult();
+
+
+// MPI Variablen
+int rank, numprocs;
+
+// eingelesene Daten
 uint64_t* valueList; // speicher alle eingelesenen Werte als unsigned long long (max 16 Zeichen)
 uint32_t valuesCount;
 uint32_t valueLength;
 
+// bestes Ergebnis
 uint64_t bestValue;
 uint64_t bestDif = -1;
-uint64_t bestScore = -1;
+
+uint64_t* allBestValues;
+uint64_t* allBestDif;
 
 int main(int argc, char **argv) {
+
+	// MPI Init
+	int node;
+	MPI_Init(&argc,&argv);
+	MPI_Comm_rank(MPI_COMM_WORLD, &node);
+
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
+
+	printf("Hello World from Node %d\n",node);
+
+	initArguments(argc, argv);
+
+	dateiEinlesen();
+
+	/*variables used for gathering timing statistics*/
+	double mytime,
+			maxtime,
+			mintime,
+			avgtime;
+
+	uint64_t start, stop;
+
+	MPI_Barrier(MPI_COMM_WORLD);  /*synchronize all processes*/
+	clock_t begin = clock();
+	mytime = MPI_Wtime();  /*get time just before work section */
+
+	uint64_t maxValue = pow(2,4 * valueLength);
+
+	start = (uint64_t)((maxValue * rank) / numprocs);
+	stop = (uint64_t)((maxValue * (rank+1)) / numprocs );
+
+	/*
+	printf("Nr %d run from: %0*llx to: %0*llx\n", 
+		rank, 
+		valueLength, 
+		start, 
+		valueLength, 
+		stop-1 );
+	*/
+	run(start, stop);
+
+	// sync Values, Dif 
+	if (rank == 0){
+		allBestValues = (uint64_t*) malloc(numprocs * sizeof(uint64_t));
+		MPI_Gather(
+			&bestValue, 			// void* send_data, 
+			1, 						// int send_count,
+			MPI_UNSIGNED_LONG_LONG, // MPI_Datatype send_datatype,
+			allBestValues, 			// void* recv_data,
+			1, 						// int recv_count,
+			MPI_UNSIGNED_LONG_LONG,	// MPI_Datatype recv_datatype,
+			0,						// int root,
+			MPI_COMM_WORLD);		// MPI_Comm communicator)
+		allBestDif = (uint64_t*) malloc(numprocs * sizeof(uint64_t));
+		MPI_Gather(
+			&bestDif, 			// void* send_data, 
+			1, 						// int send_count,
+			MPI_UNSIGNED_LONG_LONG, // MPI_Datatype send_datatype,
+			allBestDif, 			// void* recv_data,
+			1, 						// int recv_count,
+			MPI_UNSIGNED_LONG_LONG,	// MPI_Datatype recv_datatype,
+			0,						// int root,
+			MPI_COMM_WORLD);		// MPI_Comm communicator)
+	} else {
+		MPI_Gather(&bestValue, 1, MPI_UNSIGNED_LONG_LONG, NULL, 0, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+		MPI_Gather(&bestDif, 1, MPI_UNSIGNED_LONG_LONG, NULL, 0, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+	}
+	
+
+	// bestes Ergebnis raussuchen
+	if (rank == 0) {
+		for (int p = 0; p < numprocs; p++){
+			if (bestDif > allBestDif[p]){
+				bestDif = allBestDif[p];
+				bestValue = allBestValues[p];
+			}
+		}
+	}
+
+	clock_t end = clock();
+	mytime = MPI_Wtime() - mytime;  /*get time just after work section*/
+	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
+
+	/*compute max, min, and average timing statistics*/
+	MPI_Reduce(&mytime, &maxtime, 1, MPI_DOUBLE,MPI_MAX, 0, MPI_COMM_WORLD);
+	MPI_Reduce(&mytime, &mintime, 1, MPI_DOUBLE, MPI_MIN, 0,MPI_COMM_WORLD);
+	MPI_Reduce(&mytime, &avgtime, 1, MPI_DOUBLE, MPI_SUM, 0,MPI_COMM_WORLD);
+
+	if (rank == 0){
+		if (verbos == 1 || verbos == 3)
+			printResult();
+		if (verbos >= 2 ){
+			avgtime /= numprocs;
+			printf("Min: %lf  Max: %lf  Avg:  %lf\n", mintime, maxtime,avgtime);
+			printf("clock duration: %f sec\n", time_spent);
+		}
+	}
+	
+	MPI_Finalize();
+#ifdef _MSC_VER
+	system("pause");
+#endif
+	return 0;
+}
+
+void initArguments(int argc, char **argv){
+	// optional arguments init
 	int opt = 0;
 	int temp = 0;
-
 	while ((opt = getopt(argc, argv, "v:f:")) != -1) {
 		switch(opt){
 		case 'v':
@@ -55,82 +171,34 @@ int main(int argc, char **argv) {
 
 		}
 	}
-
-	dateiEinlesen();
-	clock_t begin = clock();
-
-	run();
-
-	clock_t end = clock();
-	double time_spent = (double)(end - begin) / CLOCKS_PER_SEC;
-
-	if (verbos == 1 || verbos == 3)
-		printResult();
-	if (verbos >= 2 )
-		printf("duration: %f sec\n", time_spent);
-	
-#ifdef _MSC_VER
-	system("pause");
-#endif
-	return 0;
 }
 
-void run(){
+void run(uint64_t start, uint64_t stop){
 	uint64_t currDif = 0;
 	uint64_t localDif = 0;
-#ifdef WithScore
-	uint64_t sum;
-#endif
 
-	uint64_t maxValue = pow(2,4*valueLength)-1 ;
-	//printf("%llx\n", maxValue);
 
 	// Schleife zählt von 0 bis 0xFFFFFF hoch (in newValue)
-	for (uint64_t newValue = 0; newValue <= maxValue; newValue++) { 
+	for (uint64_t newValue = start; newValue < stop; newValue++) { 
 		localDif = 0;
-#ifdef WithScore
-		sum = 0;
-#endif
+
 		for (int i = 0; i < valuesCount; i++){
 			// berechne unterschide
 			currDif = hammingDistanz(newValue, valueList[i]);
-#ifdef WithScore
-			// summiere alle Unterschidswerte
-			sum += currDif;
-#endif
 
 			// speichert höchste differenz zu newValue
 			if (currDif > localDif)
 				localDif = currDif;
 
-#ifdef WithScore
-			// beginnt mit nächstem iteration für newValue bei:
-			if (sum >= bestScore || 
-				currDif > bestDif)
-				break;
-#else
 			if (currDif >= bestDif)
 				break;
-#endif
-
-
 		}
 
-#ifdef WithScore
-		if (localDif < bestDif && sum < bestScore ) {
-			bestScore = sum;
-			bestDif = localDif;
-			bestValue = newValue;
-			//printf("new best: %0*llx dif: %llu sum: %llu\n", (int)valueLength, bestValue, bestDif, bestScore );
-		}
-#else
 		if (localDif < bestDif ) {	
 			bestDif = localDif;
 			bestValue = newValue;
 			//printf("new best: %0*llx dif: %llu\n", (int)valueLength, bestValue, bestDif );
 		}
-#endif
-
 	}
 }
 
@@ -149,15 +217,15 @@ void dateiEinlesen() {
 
 	//prüfe ob die datei auch existiert
 	if (NULL == quelle) {
-		printf("Konnte Datei \"test.txt\" nicht oeffnen!\n");
-		return;
+		//printf("Konnte Datei \"test.txt\" nicht oeffnen!\n");
+		exit(2);
 	}
 
 	//erste Zeile der Text datei auslesen und in eine Variabele speichern, mit fgets(ziel, n menge, quelle).
 	if (fgets(zeile, laenge, quelle) != NULL) {
 
 		valuesCount = atoi(zeile);
-		printf("Groesse: %d\n", valuesCount);
+		//printf("Groesse: %d\n", valuesCount);
 		valueList = (uint64_t*)malloc(valuesCount * sizeof(uint64_t));
 	}
 
@@ -165,28 +233,28 @@ void dateiEinlesen() {
 	if (fgets(zeile, laenge, quelle) != NULL) {
 
 		valueLength = atoi(zeile);
-		printf("Laenge: %d\n", valueLength);
-		if (valueLength > 16){
-			printf("Zeichenkette zu lang(max 16). Dateinvormat kann nicht allles speichern\n");
-			exit(2);
+		//printf("Laenge: %d\n", valueLength);
+		if (valueLength > 15){
+			printf("Zeichenkette zu lang(max 15). Dateinvormat kann nicht allles speichern\n");
+			exit(3);
 		}
 	}
-	printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n");
+	//printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n");
 	//
 	int count = 0;
-	printf(" i. hex\n");
+	//printf(" i. hex\n");
 
 	while (fgets(zeile, laenge, quelle) != NULL) {
 		// wandle hex-string zu uint um und schreibe in liste
 		valueList[count] = (uint64_t)strtol(zeile, NULL, 16);
 
-		printf("%2d. 0x%0*llx \n", count, (int)valueLength, valueList[count]);
+		//printf("%2d. 0x%0*llx \n", count, (int)valueLength, valueList[count]);
 
 		count++;
 		if (count >= valuesCount)
 			break;
 	}
-	printf("\n");
+	//printf("\n");
 
 	free(zeile);
 }
@@ -216,9 +284,5 @@ void printResult(){
 		dif = hammingDistanz(bestValue, valueList[i]);
 		printf("%0*llx\t%llu\n", vSize, valueList[i], dif);
 	}
-#ifdef WithScore
-	printf("--------------------------------------\n");
-	printf("%*s\t%llu\n", vSize, "sum:", bestScore);
-#endif
 	printf("======================================\n");
 }
