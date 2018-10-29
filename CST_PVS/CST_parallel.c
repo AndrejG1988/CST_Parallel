@@ -5,14 +5,14 @@
 #include <mpi.h>
 
 #ifdef _MSC_VER
-#	include "getopt.h" // extra library für argument übergabe
+#	include "getopt.h" // extra library fÃ¼r argument Ã¼bergabe
 #	include <intrin.h>
 #	define __builtin_popcountll __popcnt64
 #else 
 #	include <unistd.h>
 #endif
 
-#define DEBUG
+//#define DEBUG
 
 #pragma warning(disable : 4996)
 
@@ -33,7 +33,7 @@ int rank, numprocs;
 
 // eingelesene Daten
 uint64_t* valueList; // speicher alle eingelesenen Werte als unsigned long long (max 16 Zeichen)
-uint32_t valuesCount;
+uint32_t valuesCount = -1;
 uint32_t valueLength;
 
 // bestes Ergebnis
@@ -79,14 +79,6 @@ int main(int argc, char **argv) {
 	start = (uint64_t)((maxValue * rank) / numprocs);
 	stop = (uint64_t)((maxValue * (rank+1)) / numprocs );
 
-	/*
-	printf("Nr %d run from: %0*llx to: %0*llx\n", 
-		rank, 
-		valueLength, 
-		start, 
-		valueLength, 
-		stop-1 );
-	*/
 	run(start, stop);
 
 	// sync Values, Dif 
@@ -157,28 +149,35 @@ void initArguments(int argc, char **argv){
 	// optional arguments init
 	int opt = 0;
 	int temp = 0;
-	while ((opt = getopt(argc, argv, "v:f:")) != -1) {
+	while ((opt = getopt(argc, argv, "v:f:s:")) != -1) {
 		switch(opt){
 		case 'v':
 		temp = atoi(optarg);
 		if (temp >= 0 && temp <= 3){
-			printf("Verbos: %d\n", temp);
+			//printf("Verbos: %d\n", temp);
 			verbos = temp;	
 #ifdef DEBUG
-			verbos = 3;
+			if (rank == 0) printf("Verbos set to %d\n", verbos);
 #endif
 		}
 		break;
 		case 'f':
 		file = optarg;
-		printf("input file: %s\n", file);
+#ifdef DEBUG
+		if (rank == 0) printf("input file: %s\n", file);
+#endif
+		break;
+		case 's':
+		valuesCount = (uint32_t)atoi(optarg);
+#ifdef DEBUG
+		if (rank == 0) printf("max num of Strings set to: %u\n", valuesCount);
+#endif
 		break;
 		case '?':
 		printf("wtf\n");
 		break;
 		default:
 		printf("hmmmm\n");
-
 		}
 	}
 }
@@ -188,7 +187,7 @@ void run(uint64_t start, uint64_t stop){
 	uint64_t localDif = 0;
 
 
-	// Schleife zählt von 0 bis 0xFFFFFF hoch (in newValue)
+	// Schleife zÃ¤hlt von 0 bis 0xFFFFFF hoch (in newValue)
 	for (uint64_t newValue = start; newValue < stop; newValue++) { 
 		localDif = 0;
 
@@ -196,7 +195,7 @@ void run(uint64_t start, uint64_t stop){
 			// berechne unterschide
 			currDif = hammingDistanz(newValue, valueList[i]);
 
-			// speichert höchste differenz zu newValue
+			// speichert hÃ¶chste differenz zu newValue
 			if (currDif > localDif)
 				localDif = currDif;
 
@@ -225,7 +224,7 @@ void dateiEinlesen() {
 	// Speicher reservieren
 	char* zeile = (char*)malloc(sizeof(char)*laenge);
 
-	//prüfe ob die datei auch existiert
+	//prÃ¼fe ob die datei auch existiert
 	if (quelle == NULL) {
 		printf("Konnte Datei \"%s\" nicht oeffnen!\n", file);
 		exit(2);
@@ -234,10 +233,11 @@ void dateiEinlesen() {
 	//erste Zeile der Text datei auslesen und in eine Variabele speichern, mit fgets(ziel, n menge, quelle).
 	if (fgets(zeile, laenge, quelle) != NULL) {
 
-		valuesCount = atoi(zeile);
+		if (valuesCount > (uint32_t)atoi(zeile) )
+			valuesCount = (uint32_t)atoi(zeile);
+
 #ifdef DEBUG
-		if (rank == 0)
-			printf("valueCount: %d\n", valuesCount);
+		if (rank == 0) printf("valuesCount: %d\n", valuesCount);
 #endif
 		valueList = (uint64_t*)malloc(valuesCount * sizeof(uint64_t));
 	}
@@ -247,8 +247,7 @@ void dateiEinlesen() {
 
 		valueLength = atoi(zeile);
 #ifdef DEBUG
-		if (rank == 0)
-			printf("valueLength: %d\n", valueLength);
+		if (rank == 0) printf("valueLength: %d\n", valueLength);
 #endif
 		if (valueLength > 15){
 			printf("Zeichenkette zu lang(max 15). Dateinvormat kann nicht allles speichern\n");
@@ -258,8 +257,7 @@ void dateiEinlesen() {
 
 	
 #ifdef DEBUG
-	if (rank == 0)
-		printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n i. hex\n");
+	if (rank == 0) printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n i. hex\n");
 #endif
 	int count = 0;
 	while (fgets(zeile, laenge, quelle) != NULL) {
@@ -267,8 +265,7 @@ void dateiEinlesen() {
 		valueList[count] = (uint64_t)strtol(zeile, NULL, 16);
 
 #ifdef DEBUG
-		if (rank == 0)
-		printf("%2d. 0x%0*llx \n", count, (int)valueLength, valueList[count]);
+		if (rank == 0) printf("%2d. 0x%0*llx \n", count, (int)valueLength, valueList[count]);
 #endif
 
 		count++;
@@ -276,8 +273,7 @@ void dateiEinlesen() {
 			break;
 	}
 #ifdef DEBUG
-	if (rank == 0)
-	printf("\n");
+	if (rank == 0) printf("\n");
 #endif
 
 	free(zeile);
