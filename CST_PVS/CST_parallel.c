@@ -9,7 +9,6 @@
 	Um MPI ausführen zu können muss man mpiexec -n 4 Clostest_String_Problem.exe -s1 -v3 -f strings16.txt eingeben.
 */
 
-
 #ifdef _MSC_VER
 #   include "getopt.h" // extra library für argument übergabe
 #	include <intrin.h>
@@ -19,7 +18,7 @@
 #   define __popcnt64 __builtin_popcountll
 #endif
 
-#define DEBUG
+// #define DEBUG
 
 #pragma warning(disable : 4996)
 
@@ -38,26 +37,23 @@ void printResult();
 // MPI Variablen
 int rank, numprocs;
 
-typedef struct Input {
-	uint64_t* values;
-	uint32_t count;
-	uint32_t length;
-} Input;
-Input input = {.count = -1};
-
 // eingelesene Daten
-//uint64_t* valueList; // speicher alle eingelesenen Werte als unsigned long long (max 16 Zeichen)
-//uint32_t valuesCount = -1;
-//uint32_t valueLength;
+typedef struct Input {
+	uint64_t* values;		// Zahlenliste
+	uint32_t count;			// Anzahl der Zahlen (erste Zeile)
+	uint32_t system;		// Zahlensystem (zweite Zeile) ????
+	// MARK: wofür Zahlensystem notwendig 
+	uint32_t length;		// Zahlenlänge
+} Input;
+Input input = {.count = -1,
+				.length = -1};
 
+// bestes Ergebnis
 typedef struct Result {
 	uint64_t value;
 	uint64_t differenz;
 } Result;
 Result best = { .differenz = -1};
-// bestes Ergebnis
-//uint64_t bestValue;
-//uint64_t bestDif = -1;
 
 uint64_t* allBestValues;
 uint64_t* allBestDif;
@@ -234,24 +230,27 @@ void run(uint64_t start, uint64_t stop) {
 // einlesen der Informationen aus der Quelle "strings.txt" Datei
 //inhaltQuelle dateiLesen() {
 void dateiEinlesen() {
+#ifdef DEBUG
+	printf("### Lese Date ein. ###\n");
+#endif
 
-	FILE *quelle;
+	FILE *pf;
 
 	/* Bitte Pfad und Dateinamen anpassen */
-	quelle = fopen(file, "r");
+	pf = fopen(file, "r");
 	size_t laenge = 255;
 
 	// Speicher reservieren
 	char* zeile = (char*)malloc(sizeof(char)*laenge);
 
 	//prüfe ob die datei auch existiert
-	if (quelle == NULL) {
+	if (pf == NULL) {
 		printf("Konnte Datei \"%s\" nicht oeffnen!\n", file);
 		exit(2);
 	}
 
-	//erste Zeile der Text datei auslesen und in eine Variabele speichern, mit fgets(ziel, n menge, quelle).
-	if (fgets(zeile, laenge, quelle) != NULL) {
+	//erste Zeile der Text datei auslesen und in eine Variabele speichern, mit fgets(ziel, n menge, pf).
+	if (fgets(zeile, laenge, pf) != NULL) {
 
 		if (input.count > (uint32_t)atoi(zeile))
 			input.count = (uint32_t)atoi(zeile);
@@ -262,25 +261,27 @@ void dateiEinlesen() {
 		input.values = (uint64_t*)malloc(input.count * sizeof(uint64_t));
 	}
 
-	//zweite Zeile der Text datei auslesen und in eine Variabele speichern, mit fgets(ziel, n menge, quelle).
-	if (fgets(zeile, laenge, quelle) != NULL) {
+	//zweite Zeile der Text datei auslesen und in eine Variabele speichern, mit fgets(ziel, n menge, pf).
+	if (fgets(zeile, laenge, pf) != NULL) {
 
-		input.length = atoi(zeile);
+		input.system = atoi(zeile);
 #ifdef DEBUG
-		if (rank == 0) printf("input.length: %d\n", input.length);
+		if (rank == 0) printf("input.system: %d\n", input.system);
 #endif
-		if (input.length > 16) { // evetl wieder auf 15 wechseln
-			printf("Zeichenkette zu lang(max 15). Dateinvormat kann nicht allles speichern\n");
+		if (input.system > 16) { // evetl wieder auf 15 wechseln
+			printf("Zahlen systen zu gross(max hex:16).\n");
 			exit(3);
 		}
 	}
-
 
 #ifdef DEBUG
 	if (rank == 0) printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n i. hex\n");
 #endif
 	int count = 0;
-	while (fgets(zeile, laenge, quelle) != NULL) {
+	while (fgets(zeile, laenge, pf) != NULL) {
+		zeile[strcspn(zeile, "\n")] = 0;
+		if ((strlen(zeile)-1) < input.length)
+			input.length = strlen(zeile) - 1;
 		// wandle hex-string zu uint um und schreibe in liste
 		input.values[count] = (uint64_t)strtoll(zeile, NULL, 16);
 
@@ -294,6 +295,10 @@ void dateiEinlesen() {
 	}
 #ifdef DEBUG
 	if (rank == 0) printf("\n");
+#endif
+
+#ifdef DEBUG
+	if (rank == 0) printf("input.length: %d\n", input.length);
 #endif
 
 	free(zeile);
