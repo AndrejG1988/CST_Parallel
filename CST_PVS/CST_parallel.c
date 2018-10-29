@@ -2,13 +2,17 @@
 #include <stdlib.h>
 #include <time.h>
 #include <math.h>
-#include <unistd.h>
 #include <mpi.h>
 
 #ifdef _MSC_VER
-#  include <intrin.h>
-#  define __builtin_popcountll __popcnt64
+#	include "getopt.h" // extra library für argument übergabe
+#	include <intrin.h>
+#	define __builtin_popcountll __popcnt64
+#else 
+#	include <unistd.h>
 #endif
+
+#define DEBUG
 
 #pragma warning(disable : 4996)
 
@@ -48,8 +52,11 @@ int main(int argc, char **argv) {
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
-
+#ifdef DEBUG
+	if (node == 0)
+		printf("num Nodes: %d\n", numprocs);
 	printf("Hello World from Node %d\n",node);
+#endif
 
 	initArguments(argc, argv);
 
@@ -157,6 +164,9 @@ void initArguments(int argc, char **argv){
 		if (temp >= 0 && temp <= 3){
 			printf("Verbos: %d\n", temp);
 			verbos = temp;	
+#ifdef DEBUG
+			verbos = 3;
+#endif
 		}
 		break;
 		case 'f':
@@ -178,7 +188,7 @@ void run(uint64_t start, uint64_t stop){
 	uint64_t localDif = 0;
 
 
-	// Schleife zÃ¤hlt von 0 bis 0xFFFFFF hoch (in newValue)
+	// Schleife zählt von 0 bis 0xFFFFFF hoch (in newValue)
 	for (uint64_t newValue = start; newValue < stop; newValue++) { 
 		localDif = 0;
 
@@ -186,7 +196,7 @@ void run(uint64_t start, uint64_t stop){
 			// berechne unterschide
 			currDif = hammingDistanz(newValue, valueList[i]);
 
-			// speichert hÃ¶chste differenz zu newValue
+			// speichert höchste differenz zu newValue
 			if (currDif > localDif)
 				localDif = currDif;
 
@@ -215,9 +225,9 @@ void dateiEinlesen() {
 	// Speicher reservieren
 	char* zeile = (char*)malloc(sizeof(char)*laenge);
 
-	//prÃ¼fe ob die datei auch existiert
-	if (NULL == quelle) {
-		//printf("Konnte Datei \"test.txt\" nicht oeffnen!\n");
+	//prüfe ob die datei auch existiert
+	if (quelle == NULL) {
+		printf("Konnte Datei \"%s\" nicht oeffnen!\n", file);
 		exit(2);
 	}
 
@@ -225,7 +235,10 @@ void dateiEinlesen() {
 	if (fgets(zeile, laenge, quelle) != NULL) {
 
 		valuesCount = atoi(zeile);
-		//printf("Groesse: %d\n", valuesCount);
+#ifdef DEBUG
+		if (rank == 0)
+			printf("valueCount: %d\n", valuesCount);
+#endif
 		valueList = (uint64_t*)malloc(valuesCount * sizeof(uint64_t));
 	}
 
@@ -233,28 +246,39 @@ void dateiEinlesen() {
 	if (fgets(zeile, laenge, quelle) != NULL) {
 
 		valueLength = atoi(zeile);
-		//printf("Laenge: %d\n", valueLength);
+#ifdef DEBUG
+		if (rank == 0)
+			printf("valueLength: %d\n", valueLength);
+#endif
 		if (valueLength > 15){
 			printf("Zeichenkette zu lang(max 15). Dateinvormat kann nicht allles speichern\n");
 			exit(3);
 		}
 	}
-	//printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n");
-	//
-	int count = 0;
-	//printf(" i. hex\n");
 
+	
+#ifdef DEBUG
+	if (rank == 0)
+		printf("Inhalt der Quelle ausser die Ersten Zwei Zeilen: \n i. hex\n");
+#endif
+	int count = 0;
 	while (fgets(zeile, laenge, quelle) != NULL) {
 		// wandle hex-string zu uint um und schreibe in liste
 		valueList[count] = (uint64_t)strtol(zeile, NULL, 16);
 
-		//printf("%2d. 0x%0*llx \n", count, (int)valueLength, valueList[count]);
+#ifdef DEBUG
+		if (rank == 0)
+		printf("%2d. 0x%0*llx \n", count, (int)valueLength, valueList[count]);
+#endif
 
 		count++;
 		if (count >= valuesCount)
 			break;
 	}
-	//printf("\n");
+#ifdef DEBUG
+	if (rank == 0)
+	printf("\n");
+#endif
 
 	free(zeile);
 }
