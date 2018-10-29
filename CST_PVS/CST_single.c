@@ -85,7 +85,7 @@ void run(){
 	uint64_t maxValue = pow(2,4*valueLength)-1 ;
 	//printf("%llx\n", maxValue);
 
-	// Schleife zählt von 0 bis 0xFFFFFF hoch (in newValue)
+	// Schleife zÃ¤hlt von 0 bis 0xFFFFFF hoch (in newValue)
 	for (uint64_t newValue = 0; newValue <= maxValue; newValue++) { 
 		localDif = 0;
 #ifdef WithScore
@@ -99,12 +99,12 @@ void run(){
 			sum += currDif;
 #endif
 
-			// speichert höchste differenz zu newValue
+			// speichert hÃ¶chste differenz zu newValue
 			if (currDif > localDif)
 				localDif = currDif;
 
 #ifdef WithScore
-			// beginnt mit nächstem iteration für newValue bei:
+			// beginnt mit nÃ¤chstem iteration fÃ¼r newValue bei:
 			if (sum >= bestScore || 
 				currDif > bestDif)
 				break;
@@ -147,7 +147,7 @@ void dateiEinlesen() {
 	// Speicher reservieren
 	char* zeile = (char*)malloc(sizeof(char)*laenge);
 
-	//prüfe ob die datei auch existiert
+	//prÃ¼fe ob die datei auch existiert
 	if (NULL == quelle) {
 		printf("Konnte Datei \"test.txt\" nicht oeffnen!\n");
 		return;
@@ -178,7 +178,7 @@ void dateiEinlesen() {
 
 	while (fgets(zeile, laenge, quelle) != NULL) {
 		// wandle hex-string zu uint um und schreibe in liste
-		valueList[count] = (uint64_t)strtol(zeile, NULL, 16);
+		valueList[count] = (uint64_t)strtoll(zeile, NULL, 16);
 
 		printf("%2d. 0x%0*llx \n", count, (int)valueLength, valueList[count]);
 
