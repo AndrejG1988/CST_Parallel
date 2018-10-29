@@ -262,7 +262,7 @@ void dateiEinlesen() {
 	int count = 0;
 	while (fgets(zeile, laenge, quelle) != NULL) {
 		// wandle hex-string zu uint um und schreibe in liste
-		valueList[count] = (uint64_t)strtol(zeile, NULL, 16);
+		valueList[count] = (uint64_t)strtoll(zeile, NULL, 16);
 
 #ifdef DEBUG
 		if (rank == 0) printf("%2d. 0x%0*llx \n", count, (int)valueLength, valueList[count]);
