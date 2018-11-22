@@ -1,7 +1,7 @@
 /*
 		PROGRAMM ZUM LÖSEN DES CLOSEST-STRING-PROBLEMS. MIT HILFE VON MPI.
 
-		Author:
+		Author: AndrejG1988
 
 		Wie man das Programm mit Hilfe von MPI Startet
 
