@@ -1,6 +1,8 @@
 # CST_Parallel
 Closest String Problem with VIsual Studio 2017
 
+MPI mit der Nachrichtenroutine MPI_Gather beide Variatnen
+
 Variante 1: 
 Es wurde eine Variante mit der XOR Methode entwickelt, wobei die Hamming-Distanz Funktion mit einer XOR Variante zum Detektieren des Abstandes zwischen den Strings arbeitet.
 
