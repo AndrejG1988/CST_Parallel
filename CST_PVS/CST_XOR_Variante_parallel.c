@@ -4,19 +4,21 @@
 #include <math.h>
 #include <mpi.h>
 #include <stdint.h>
-#include <string.h>
+#include <intrin.h>
+#include "getopt.h"
+
 /*
 	Um MPI ausführen zu können muss man mpiexec -n 4 Clostest_String_Problem.exe -s1 -v3 -f strings16.txt eingeben.
 */
 
-#ifdef _MSC_VER
-#   include "getopt.h" // extra library für argument übergabe
-#	include <intrin.h>
+//#ifdef _MSC_VER
+//#   include "getopt.h" // extra library für argument übergabe
+//#	include <intrin.h>
 //#	define __builtin_popcountll __popcnt64
-#else 
-#	include <unistd.h>
-#   define __popcnt64 __builtin_popcountll
-#endif
+//#else 
+//#	include <unistd.h>
+//#   define __popcnt64 __builtin_popcountll
+//#endif
 
 // #define DEBUG
 
